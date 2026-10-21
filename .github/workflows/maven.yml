@@ -39,6 +39,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run Snyk Code scan
+      id: snyk
       uses: snyk/actions/maven@master
       continue-on-error: true
       env:
@@ -52,4 +53,20 @@ jobs:
       with:
         sarif_file: snyk-code.sarif
         category: snyk-code
+    - name: Notify Telegram on SAST failure
+      if: steps.snyk.outcome == 'failure'
+      uses: appleboy/telegram-action@v1
+      with:
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        message: |
+          SAST failed (Snyk Code)
+
+          Repo: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Actor: ${{ github.actor }}
+          Workflow: ${{ github.workflow }}
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
