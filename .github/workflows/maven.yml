@@ -53,15 +53,16 @@ jobs:
       with:
         sarif_file: snyk-code.sarif
         category: snyk-code
-    - name: Notify Telegram on SAST failure
-      if: steps.snyk.outcome == 'failure'
+    - name: Notify Telegram on SAST complete
+      if: always() && steps.snyk.outcome != 'skipped'
       uses: appleboy/telegram-action@v1
       with:
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         to: ${{ secrets.TELEGRAM_CHAT_ID }}
         message: |
-          SAST failed (Snyk Code)
+          SAST ${{ steps.snyk.outcome == 'success' && 'PASSED' || 'FAILED' }} (Snyk Code)
 
+          Status: ${{ steps.snyk.outcome }}
           Repo: ${{ github.repository }}
           Branch: ${{ github.ref_name }}
           Commit: ${{ github.sha }}
