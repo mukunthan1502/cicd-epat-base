@@ -33,6 +33,9 @@ jobs:
   sast:
     name: Snyk Code (SAST)
     runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      scan_outcome: ${{ steps.snyk.outcome }}
     permissions:
       contents: read
       security-events: write
@@ -53,16 +56,22 @@ jobs:
       with:
         sarif_file: snyk-code.sarif
         category: snyk-code
-    - name: Notify Telegram on SAST complete
-      if: always() && steps.snyk.outcome != 'skipped'
+
+  notify-sast:
+    name: Notify Telegram (SAST)
+    runs-on: ubuntu-latest
+    needs: sast
+    if: always() && needs.sast.result != 'skipped' && needs.sast.result != 'cancelled'
+    steps:
+    - name: Send Telegram notification
       uses: appleboy/telegram-action@v1
       with:
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         to: ${{ secrets.TELEGRAM_CHAT_ID }}
         message: |
-          SAST ${{ steps.snyk.outcome == 'success' && 'PASSED' || 'FAILED' }} (Snyk Code)
+          SAST ${{ needs.sast.outputs.scan_outcome == 'success' && 'PASSED' || 'FAILED' }} (Snyk Code)
 
-          Status: ${{ steps.snyk.outcome }}
+          Status: ${{ needs.sast.outputs.scan_outcome }}
           Repo: ${{ github.repository }}
           Branch: ${{ github.ref_name }}
           Commit: ${{ github.sha }}
